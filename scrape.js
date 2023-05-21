@@ -40,9 +40,17 @@ async function postData(url = "", data = {}) {
 //   context: await scrapeURL("https://www.bbc.com/turkce/articles/cd1kgqydyp9o"),
 // });
 
-async function sendData(url) {
-  const data = await scrapeURL(url);
-  await postData("http://localhost:3000/api/post", { context: data });
-}
+// async function sendData(url) {
+//   const data = await scrapeURL(url);
+//   await postData("http://localhost:3000/api/post", {
+//     context: data,
+//     date: 1,
+//     link: "asd",
+//     title: "asd",
+//     image: "qwe",
+//   });
+// }
 
-sendData("https://www.bbc.com/turkce/articles/cd1kgqydyp9o");
+// sendData("https://www.bbc.co.uk/turkce/haberler-dunya-65274314");
+
+module.exports = { scrapeURL, postData };
