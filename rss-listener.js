@@ -124,7 +124,9 @@ async function listener(feedURL) {
     console.log("nothing new");
   }
   const bloomberg = await bloombergFeed();
-  newFeed.push(...bloomberg);
+  bloomberg.forEach((x) => {
+    newFeed.push(x);
+  });
   //MODIFY ITEMS FOR DB
   for (const item of newFeed) {
     // console.log(item.innerHTML);
