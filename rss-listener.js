@@ -98,8 +98,13 @@ async function getLinksStartUp() {
 async function listener(feedURL) {
   const oldLinks = await getLinksStartUp();
   //fetch RSS feed
-  const response = await fetch(feedURL);
-  const xmlBody = await response.text();
+  let xmlBody;
+  try {
+    const response = await fetch(feedURL);
+    xmlBody = await response.text();
+  } catch {
+    setTimeout(listener, 300000, feedURL);
+  }
 
   const { window } = new JSDOM(xmlBody, {
     contentType: "text/xml",
@@ -151,10 +156,10 @@ async function listener(feedURL) {
     }
     console.log(news);
 
-    // await postData("http://3.73.132.230:3001/api/post", news);
+    await postData("http://3.73.132.230:3001/api/post", news);
   }
 
-  // setTimeout(listener, 300000, feedURL);
+  setTimeout(listener, 300000, feedURL);
 }
 //STRIPS CDATA FROM STRINGS
 function strip(string) {
