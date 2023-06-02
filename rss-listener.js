@@ -26,6 +26,46 @@ async function scrapeURL(url) {
   }
   return newsBody;
 }
+async function scrapeURLWT(url) {
+  const res = await fetch(url);
+  const text = await res.text();
+  const { window } = new JSDOM(text);
+  let newsBody = [];
+  newsBody.push(
+    window.document.getElementsByClassName("content-body__description")[0]
+      .innerHTML
+  );
+  const main = window.document.getElementsByClassName("content-body__detail")[0]
+    .children;
+
+  // console.log(url);
+  for (const item of main) {
+    if (item === main.item(0)) {
+    } else if (
+      item.className.includes("content-card") ||
+      item.innerHTML.includes("Kaynaklar") ||
+      item.className.includes("bottom-new-video")
+    ) {
+      return newsBody;
+    } else if (item.getElementsByTagName("img").length > 0) {
+      const src = item
+        .getElementsByTagName("img")[0]
+        .getAttribute("data-original");
+
+      newsBody.push(validSrc(src, "https://www.webtekno.com"));
+    } else {
+      newsBody.push(item.outerHTML);
+    }
+  }
+  return newsBody;
+}
+
+function validSrc(src, baseURL) {
+  if (src.includes("http")) {
+    return src;
+  }
+  return `${baseURL}${src}`;
+}
 //SCRAPES BLOOMBERG NEWS FROM THEIR SITES
 async function scrapeURLBB(url) {
   const httpsAgent = new https.Agent({
@@ -54,7 +94,7 @@ async function scrapeURLBB(url) {
       newsBody.push(item.outerHTML);
     }
   }
-  console.log(newsBody);
+
   return newsBody;
 }
 //POSTS DATA TO DB
@@ -78,7 +118,10 @@ async function postData(url = "", data = {}) {
 //RETURNS THE FIRST LINK
 function validURL(inputArray) {
   for (entry of inputArray) {
-    if (entry.includes("http")) {
+    if (
+      entry.includes("http") &&
+      (entry.includes("jpg") || entry.includes("jpeg") || entry.includes("png"))
+    ) {
       return entry;
     }
   }
@@ -96,37 +139,26 @@ async function getLinksStartUp() {
 
 // LISTENS RSS FEED
 async function listener(feedURL) {
-  const oldLinks = await getLinksStartUp();
-  //fetch RSS feed
-  let xmlBody;
-  try {
-    const response = await fetch(feedURL);
-    xmlBody = await response.text();
-  } catch {
-    setTimeout(listener, 300000, feedURL);
-  }
-
-  const { window } = new JSDOM(xmlBody, {
-    contentType: "text/xml",
-  });
-
-  //compare old feed with fetched one
   let newFeed = [];
-  for (const item of window.document.getElementsByTagName("item")) {
-    const link = item.getElementsByTagName("guid")[0].innerHTML;
-    if (!oldLinks.includes(link)) {
-      newFeed.push(item);
-      //   oldLinks.push(link);
-    }
-  }
-
-  if (newFeed.length === 0) {
-    console.log("nothing new");
+  const bbc = await bbcFeed();
+  if (bbc.length > 0) {
+    bbc.forEach((x) => {
+      newFeed.push(x);
+    });
   }
   const bloomberg = await bloombergFeed();
-  bloomberg.forEach((x) => {
-    newFeed.push(x);
-  });
+  if (bloomberg.length > 0) {
+    bloomberg.forEach((x) => {
+      newFeed.push(x);
+    });
+  }
+  const webtekno = await webteknoFeed();
+  if (webtekno.length > 0) {
+    webtekno.forEach((x) => {
+      newFeed.push(x);
+    });
+  }
+
   //MODIFY ITEMS FOR DB
   for (const item of newFeed) {
     // console.log(item.innerHTML);
@@ -156,6 +188,12 @@ async function listener(feedURL) {
       news.image = validURL(news.context);
       news.category = "breaking";
     }
+    if (news.link.includes("webtekno")) {
+      news.context = await scrapeURLWT(news.link);
+      news.image = validURL(news.context);
+      news.category = "tech";
+    }
+
     console.log(news);
 
     await postData("http://3.73.132.230:3001/api/post", news);
@@ -163,17 +201,51 @@ async function listener(feedURL) {
 
   setTimeout(listener, 300000, feedURL);
 }
+
 //STRIPS CDATA FROM STRINGS
 function strip(string) {
   return string.replace("<![CDATA[", "").replace("]]>", "");
 }
+
+async function bbcFeed() {
+  feedURL = "https://feeds.bbci.co.uk/turkce/rss.xml";
+  const oldLinks = await getLinksStartUp();
+  //fetch RSS feed
+  let xmlBody;
+  try {
+    const response = await fetch(feedURL);
+    xmlBody = await response.text();
+  } catch {
+    setTimeout(listener, 300000, feedURL);
+  }
+
+  const { window } = new JSDOM(xmlBody, {
+    contentType: "text/xml",
+  });
+
+  //compare old feed with fetched one
+  let newFeed = [];
+  for (const item of window.document.getElementsByTagName("item")) {
+    const link = item.getElementsByTagName("guid")[0].innerHTML;
+    if (!oldLinks.includes(link)) {
+      newFeed.push(item);
+      //   oldLinks.push(link);
+    }
+  }
+
+  if (newFeed.length === 0) {
+    console.log("nothing new (bbc)");
+  }
+  return newFeed;
+}
+
 //RETURNS ITEM OF RSS FEED OF BLOOMBERGHT RSS
 async function bloombergFeed() {
   const oldLinks = await getLinksStartUp();
   //fetch RSS feed
-  console.log("runng");
+
   const httpsAgent = new https.Agent({
-    rejectUnauthorized: false, // (NOTE: this will disable client verification)
+    rejectUnauthorized: false,
     cert: fs.readFileSync("./intermediate.pem"),
   });
   let xmlBody;
@@ -199,11 +271,42 @@ async function bloombergFeed() {
   }
 
   if (newFeed.length === 0) {
-    console.log("nothing new");
+    console.log("nothing new (bbht)");
     return;
   }
 
   return newFeed;
 }
+async function webteknoFeed() {
+  feedURL = "https://www.webtekno.com/rss/yazilim/en-yeniler.xml";
+  const oldLinks = await getLinksStartUp();
+  //fetch RSS feed
+  let xmlBody;
+  try {
+    const response = await fetch(feedURL);
+    xmlBody = await response.text();
+  } catch {
+    setTimeout(listener, 300000, feedURL);
+  }
 
+  const { window } = new JSDOM(xmlBody, {
+    contentType: "text/xml",
+  });
+
+  //compare old feed with fetched one
+  let newFeed = [];
+  for (const item of window.document.getElementsByTagName("item")) {
+    const link = item.getElementsByTagName("guid")[0].innerHTML;
+    if (!oldLinks.includes(link)) {
+      newFeed.push(item);
+      //   oldLinks.push(link);
+    }
+  }
+
+  if (newFeed.length === 0) {
+    console.log("nothing new (bbc)");
+  }
+
+  return newFeed;
+}
 listener("https://feeds.bbci.co.uk/turkce/rss.xml");
