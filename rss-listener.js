@@ -27,6 +27,7 @@ async function scrapeURL(url) {
   return newsBody;
 }
 async function scrapeURLWT(url) {
+  console.log(url);
   const res = await fetch(url);
   const text = await res.text();
   const { window } = new JSDOM(text);
@@ -35,8 +36,10 @@ async function scrapeURLWT(url) {
     window.document.getElementsByClassName("content-body__description")[0]
       .innerHTML
   );
+  const image = window.document.getElementsByTagName("figure")[0].children[0];
+
   newsBody.push(
-    window.document.getElementsByTagName("figure")[0].children[0].content
+    image.getAttribute("data-original") || image.getAttribute("content")
   );
   const main = window.document.getElementsByClassName("content-body__detail")[0]
     .children;
@@ -48,6 +51,7 @@ async function scrapeURLWT(url) {
       item.innerHTML.includes("Kaynaklar") ||
       item.className.includes("bottom-new-video")
     ) {
+      console.log(newsBody);
       return newsBody;
     } else if (item.getElementsByTagName("img").length > 0) {
       const src = item
@@ -59,6 +63,7 @@ async function scrapeURLWT(url) {
       newsBody.push(item.outerHTML);
     }
   }
+  console.log(newsBody);
   return newsBody;
 }
 
