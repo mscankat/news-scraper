@@ -35,10 +35,12 @@ async function scrapeURLWT(url) {
     window.document.getElementsByClassName("content-body__description")[0]
       .innerHTML
   );
+  newsBody.push(
+    window.document.getElementsByTagName("figure")[0].children[0].content
+  );
   const main = window.document.getElementsByClassName("content-body__detail")[0]
     .children;
 
-  // console.log(url);
   for (const item of main) {
     if (item === main.item(0)) {
     } else if (
