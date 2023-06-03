@@ -274,7 +274,6 @@ async function bloombergFeed() {
 
   if (newFeed.length === 0) {
     console.log("nothing new (bbht)");
-    return;
   }
 
   return newFeed;
