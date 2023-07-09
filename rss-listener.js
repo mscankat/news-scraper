@@ -135,8 +135,19 @@ function validURL(inputArray) {
 }
 //GETS EXISTING LINKS
 async function getLinksStartUp() {
-  const response = await fetch("http://3.73.132.230:3001/api/getAll");
-  const data = await response.json();
+  const responseF = await fetch(
+    "https://khpycrjcxqx6xg4gpywmtzvr4a0uafez.lambda-url.eu-central-1.on.aws/api/getMany/finance/100/0"
+  );
+  const responseB = await fetch(
+    "https://khpycrjcxqx6xg4gpywmtzvr4a0uafez.lambda-url.eu-central-1.on.aws/api/getMany/breaking/100/0"
+  );
+  const responseT = await fetch(
+    "https://khpycrjcxqx6xg4gpywmtzvr4a0uafez.lambda-url.eu-central-1.on.aws/api/getMany/tech/100/0"
+  );
+  const dataF = await responseF.json();
+  const dataB = await responseB.json();
+  const dataT = await responseT.json();
+  const data = [...dataB, ...dataF, ...dataT];
   let linkList = [];
   for (item of data) {
     linkList.push(item.link);
@@ -147,23 +158,36 @@ async function getLinksStartUp() {
 // LISTENS RSS FEED
 async function listener(feedURL) {
   let newFeed = [];
-  const bbc = await bbcFeed();
-  if (bbc.length > 0) {
-    bbc.forEach((x) => {
-      newFeed.push(x);
-    });
+  try {
+    const bbc = await bbcFeed();
+    if (bbc.length > 0) {
+      bbc.forEach((x) => {
+        newFeed.push(x);
+      });
+    }
+  } catch {
+    console.log("error: bbcFeed");
   }
-  const bloomberg = await bloombergFeed();
-  if (bloomberg.length > 0) {
-    bloomberg.forEach((x) => {
-      newFeed.push(x);
-    });
+  try {
+    const bloomberg = await bloombergFeed();
+    if (bloomberg.length > 0) {
+      bloomberg.forEach((x) => {
+        newFeed.push(x);
+      });
+    }
+  } catch {
+    console.log("error: bloombergFeed");
   }
-  const webtekno = await webteknoFeed();
-  if (webtekno.length > 0) {
-    webtekno.forEach((x) => {
-      newFeed.push(x);
-    });
+
+  try {
+    const webtekno = await webteknoFeed();
+    if (webtekno.length > 0) {
+      webtekno.forEach((x) => {
+        newFeed.push(x);
+      });
+    }
+  } catch {
+    console.log("error: webteknoFeed");
   }
 
   //MODIFY ITEMS FOR DB
@@ -186,24 +210,42 @@ async function listener(feedURL) {
         .replace("]]>", "");
     }
     if (news.link.includes("bloomberght")) {
-      news.context = await scrapeURLBB(news.link);
-      news.image = validURL(news.context);
-      news.category = "finance";
+      try {
+        news.context = await scrapeURLBB(news.link);
+        news.image = validURL(news.context);
+        news.category = "finance";
+      } catch {
+        console.log("error: scrapeURLBB");
+      }
     }
     if (news.link.includes("bbc")) {
-      news.context = await scrapeURL(news.link);
-      news.image = validURL(news.context);
-      news.category = "breaking";
+      try {
+        news.context = await scrapeURL(news.link);
+        news.image = validURL(news.context);
+        news.category = "breaking";
+      } catch {
+        console.log("error: scrapeURL");
+      }
     }
     if (news.link.includes("webtekno")) {
-      news.context = await scrapeURLWT(news.link);
-      news.image = validURL(news.context);
-      news.category = "tech";
+      try {
+        news.context = await scrapeURLWT(news.link);
+        news.image = validURL(news.context);
+        news.category = "tech";
+      } catch {
+        console.log("error: scrapeURLWT");
+      }
     }
 
     console.log(news);
-
-    await postData("http://3.73.132.230:3001/api/post", news);
+    try {
+      await postData(
+        "https://khpycrjcxqx6xg4gpywmtzvr4a0uafez.lambda-url.eu-central-1.on.aws/api/post",
+        news
+      );
+    } catch {
+      console.log("error: postData");
+    }
   }
 
   setTimeout(listener, 300000, feedURL);
@@ -310,7 +352,7 @@ async function webteknoFeed() {
   }
 
   if (newFeed.length === 0) {
-    console.log("nothing new (bbc)");
+    console.log("nothing new (wt)");
   }
 
   return newFeed;
