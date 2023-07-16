@@ -3,6 +3,7 @@ const { JSDOM } = jsdom;
 const axios = require("axios");
 const fs = require("fs");
 const https = require("https");
+const moment = require("moment");
 //SCRAPES BBC NEWS FROM THEIR SITES
 async function scrapeURL(url) {
   const res = await fetch(url);
@@ -27,7 +28,6 @@ async function scrapeURL(url) {
   return newsBody;
 }
 async function scrapeURLWT(url) {
-  console.log(url);
   const res = await fetch(url);
   const text = await res.text();
   const { window } = new JSDOM(text);
@@ -51,7 +51,6 @@ async function scrapeURLWT(url) {
       item.innerHTML.includes("Kaynaklar") ||
       item.className.includes("bottom-new-video")
     ) {
-      console.log(newsBody);
       return newsBody;
     } else if (item.getElementsByTagName("img").length > 0) {
       const src = item
@@ -63,7 +62,6 @@ async function scrapeURLWT(url) {
       newsBody.push(item.outerHTML);
     }
   }
-  console.log(newsBody);
   return newsBody;
 }
 
@@ -165,8 +163,8 @@ async function listener(feedURL) {
         newFeed.push(x);
       });
     }
-  } catch {
-    console.log("error: bbcFeed");
+  } catch (e) {
+    console.log(`error: bbcFeed/n ${e}`);
   }
   try {
     const bloomberg = await bloombergFeed();
@@ -276,7 +274,9 @@ async function bbcFeed() {
   let newFeed = [];
   for (const item of window.document.getElementsByTagName("item")) {
     const link = item.getElementsByTagName("guid")[0].innerHTML;
-    if (!oldLinks.includes(link)) {
+    const date = new moment(item.getElementsByTagName("pubDate")[0].innerHTML);
+    const timeIntervalDays = moment.duration(moment().diff(date)).asDays();
+    if (!oldLinks.includes(link) && timeIntervalDays < 15) {
       newFeed.push(item);
       //   oldLinks.push(link);
     }
@@ -314,7 +314,11 @@ async function bloombergFeed() {
   let newFeed = [];
   for (const item of window.window.document.getElementsByTagName("item")) {
     const link = strip(item.getElementsByTagName("guid")[0].innerHTML);
-    if (!oldLinks.includes(link)) {
+    const date = new moment(
+      strip(item.getElementsByTagName("pubDate")[0].innerHTML)
+    );
+    const timeIntervalDays = moment.duration(moment().diff(date)).asDays();
+    if (!oldLinks.includes(link) && timeIntervalDays < 15) {
       newFeed.push(item);
     }
   }
@@ -345,7 +349,9 @@ async function webteknoFeed() {
   let newFeed = [];
   for (const item of window.document.getElementsByTagName("item")) {
     const link = item.getElementsByTagName("guid")[0].innerHTML;
-    if (!oldLinks.includes(link)) {
+    const date = new moment(item.getElementsByTagName("pubDate")[0].innerHTML);
+    const timeIntervalDays = moment.duration(moment().diff(date)).asDays();
+    if (!oldLinks.includes(link) && timeIntervalDays < 15) {
       newFeed.push(item);
       //   oldLinks.push(link);
     }
