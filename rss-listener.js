@@ -156,8 +156,9 @@ async function getLinksStartUp() {
 // LISTENS RSS FEED
 async function listener(feedURL) {
   let newFeed = [];
+  const linkStart = await getLinksStartUp();
   try {
-    const bbc = await bbcFeed();
+    const bbc = await bbcFeed(linkStart);
     if (bbc.length > 0) {
       bbc.forEach((x) => {
         newFeed.push(x);
@@ -167,7 +168,7 @@ async function listener(feedURL) {
     console.log(`error: bbcFeed/n ${e}`);
   }
   try {
-    const bloomberg = await bloombergFeed();
+    const bloomberg = await bloombergFeed(linkStart);
     if (bloomberg.length > 0) {
       bloomberg.forEach((x) => {
         newFeed.push(x);
@@ -178,7 +179,7 @@ async function listener(feedURL) {
   }
 
   try {
-    const webtekno = await webteknoFeed();
+    const webtekno = await webteknoFeed(linkStart);
     if (webtekno.length > 0) {
       webtekno.forEach((x) => {
         newFeed.push(x);
@@ -254,9 +255,9 @@ function strip(string) {
   return string.replace("<![CDATA[", "").replace("]]>", "");
 }
 
-async function bbcFeed() {
+async function bbcFeed(oldLinks) {
   feedURL = "https://feeds.bbci.co.uk/turkce/rss.xml";
-  const oldLinks = await getLinksStartUp();
+
   //fetch RSS feed
   let xmlBody;
   try {
@@ -289,10 +290,8 @@ async function bbcFeed() {
 }
 
 //RETURNS ITEM OF RSS FEED OF BLOOMBERGHT RSS
-async function bloombergFeed() {
-  const oldLinks = await getLinksStartUp();
+async function bloombergFeed(oldLinks) {
   //fetch RSS feed
-
   const httpsAgent = new https.Agent({
     rejectUnauthorized: false,
     cert: fs.readFileSync("./intermediate.pem"),
@@ -329,9 +328,8 @@ async function bloombergFeed() {
 
   return newFeed;
 }
-async function webteknoFeed() {
+async function webteknoFeed(oldLinks) {
   feedURL = "https://www.webtekno.com/rss/yazilim/en-yeniler.xml";
-  const oldLinks = await getLinksStartUp();
   //fetch RSS feed
   let xmlBody;
   try {
